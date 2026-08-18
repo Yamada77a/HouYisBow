@@ -15,6 +15,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 repositories {
     mavenCentral()
+    maven { url = 'https://maven.blamejared.com' }
 }
 
 neoForge {
@@ -51,6 +52,7 @@ neoForge {
 }
 
 dependencies {
+    compileOnly 'mezz.jei:jei-1.21.1-neoforge-api:19.39.0.372'
     testImplementation platform('org.junit:junit-bom:5.11.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

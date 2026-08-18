@@ -1,9 +1,10 @@
 package dev.houyisbow;
 
+import dev.houyisbow.entity.HouyisArrowEntity;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -13,18 +14,15 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.entity.player.ArrowLooseEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -33,14 +31,22 @@ import net.neoforged.neoforge.network.registration.NetworkRegistry;
 @Mod(HouYisBow.MOD_ID)
 public final class HouYisBow {
     public static final String MOD_ID = "houyis_bow";
-    public static final double ARROW_SPEED_MULTIPLIER = 3.0D;
-    public static final int VANILLA_FULL_DRAW_TICKS = 20;
-    public static final int FULL_DRAW_TICKS = 4;
-    public static final int CHARGE_TICK_MULTIPLIER = VANILLA_FULL_DRAW_TICKS / FULL_DRAW_TICKS;
+    private static final int SONIC_BOOM_WAVE_LENGTH = 22;
     private static final double MINIMUM_DIRECTION_LENGTH_SQUARED = 1.0E-12D;
 
     public HouYisBow(IEventBus modEventBus) {
+        ModItems.ITEMS.register(modEventBus);
+        ModEntities.ENTITIES.register(modEventBus);
+        ModParticles.PARTICLES.register(modEventBus);
+        ModRecipes.RECIPE_SERIALIZERS.register(modEventBus);
         modEventBus.addListener(HouYisBow::registerPayloadHandlers);
+        modEventBus.addListener(HouYisBow::addCreativeTabItems);
+    }
+
+    private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
+        if (event.getTabKey() == CreativeModeTabs.COMBAT) {
+            event.accept(ModItems.HOUYIS_BOW);
+        }
     }
 
     private static void registerPayloadHandlers(RegisterPayloadHandlersEvent event) {
@@ -53,120 +59,61 @@ public final class HouYisBow {
                 );
     }
 
-    @EventBusSubscriber(modid = MOD_ID)
-    static final class GameplayEvents {
-        @SubscribeEvent(priority = EventPriority.LOWEST)
-        public static void onArrowLoose(ArrowLooseEvent event) {
-            if (!(event.getBow().getItem() instanceof BowItem)) {
-                return;
-            }
-
-            int originalChargeTicks = event.getCharge();
-            if (event.getLevel() instanceof ServerLevel serverLevel
-                    && isFullyDrawn(originalChargeTicks)) {
-                playFullDrawEffects(serverLevel, event.getEntity());
-            }
-
-            event.setCharge(adjustChargeTicks(originalChargeTicks));
+    /** Sends the unclamped initial velocity which vanilla entity packets cannot represent above 3.9 blocks/tick. */
+    public static void syncArrowStateTo(ServerPlayer player, HouyisArrowEntity arrow) {
+        if (!NetworkRegistry.hasChannel(player.connection, ArrowStatePayload.TYPE.id())) {
+            return;
         }
 
-        @SubscribeEvent(priority = EventPriority.LOWEST)
-        public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
-            if (event.getLevel().isClientSide() || event.loadedFromDisk()) {
-                return;
-            }
-
-            if (event.getEntity() instanceof AbstractArrow arrow
-                    && arrow.getWeaponItem() != null
-                    && arrow.getWeaponItem().getItem() instanceof BowItem) {
-                aimArrowAtShooterCrosshair(arrow);
-            }
-        }
-
-        @SubscribeEvent
-        public static void onStartTracking(PlayerEvent.StartTracking event) {
-            if (!(event.getEntity() instanceof ServerPlayer player)
-                    || !(event.getTarget() instanceof AbstractArrow arrow)
-                    || arrow.getWeaponItem() == null
-                    || !(arrow.getWeaponItem().getItem() instanceof BowItem)
-                    || !NetworkRegistry.hasChannel(player.connection, ArrowStatePayload.TYPE.id())) {
-                return;
-            }
-
-            Vec3 position = arrow.position();
-            Vec3 velocity = arrow.getDeltaMovement();
-            PacketDistributor.sendToPlayer(
-                    player,
-                    new ArrowStatePayload(
-                            arrow.getId(),
-                            position.x, position.y, position.z,
-                            velocity.x, velocity.y, velocity.z
-                    )
-            );
-        }
+        PacketDistributor.sendToPlayer(player, ArrowStatePayload.from(arrow));
     }
 
-    static int adjustChargeTicks(int originalChargeTicks) {
-        int clampedChargeTicks = Math.max(0, Math.min(FULL_DRAW_TICKS, originalChargeTicks));
-        return clampedChargeTicks * CHARGE_TICK_MULTIPLIER;
-    }
-
-    static boolean isFullyDrawn(int originalChargeTicks) {
-        return originalChargeTicks >= FULL_DRAW_TICKS;
-    }
-
-    static Vec3 calculateTunedVelocity(Vec3 originalVelocity, Vec3 requestedAimDirection) {
-        if (originalVelocity.lengthSqr() < MINIMUM_DIRECTION_LENGTH_SQUARED) {
-            return originalVelocity;
-        }
-
-        Vec3 aimDirection = requestedAimDirection.lengthSqr() < MINIMUM_DIRECTION_LENGTH_SQUARED
-                ? originalVelocity.normalize()
-                : requestedAimDirection.normalize();
-        return aimDirection.scale(originalVelocity.length() * ARROW_SPEED_MULTIPLIER);
-    }
-
-    private static void playFullDrawEffects(ServerLevel level, Entity shooter) {
+    public static void playFullDrawEffects(ServerLevel level, Entity shooter) {
         Vec3 lookDirection = shooter.getLookAngle();
         if (lookDirection.lengthSqr() < MINIMUM_DIRECTION_LENGTH_SQUARED) {
             return;
         }
 
+        Vec3 aimDirection = lookDirection.normalize();
         Vec3 muzzle = new Vec3(shooter.getX(), shooter.getEyeY(), shooter.getZ())
-                .add(lookDirection.normalize().scale(0.8D));
+                .add(aimDirection.scale(0.8D));
         level.playSound(
                 null,
                 muzzle.x, muzzle.y, muzzle.z,
-                SoundEvents.FIREWORK_ROCKET_LAUNCH,
+                SoundEvents.WARDEN_SONIC_BOOM,
                 SoundSource.PLAYERS,
-                1.0F,
+                0.35F,
                 1.0F
         );
-        level.sendParticles(
-                ParticleTypes.FIREWORK,
-                muzzle.x, muzzle.y, muzzle.z,
-                24,
-                0.12D, 0.12D, 0.12D,
-                0.08D
-        );
+
+        for (int distance = 1; distance < SONIC_BOOM_WAVE_LENGTH; distance++) {
+            Vec3 particlePosition = calculateSonicBoomParticlePosition(muzzle, aimDirection, distance);
+            SimpleParticleType particle = ModParticles.forWaveStep(distance);
+            level.sendParticles(
+                    particle,
+                    particlePosition.x, particlePosition.y, particlePosition.z,
+                    1,
+                    0.0D, 0.0D, 0.0D,
+                    0.0D
+            );
+        }
     }
 
-    private static void aimArrowAtShooterCrosshair(AbstractArrow arrow) {
-        Vec3 originalVelocity = arrow.getDeltaMovement();
-        if (originalVelocity.lengthSqr() < MINIMUM_DIRECTION_LENGTH_SQUARED) {
-            return;
-        }
+    static Vec3 calculateSonicBoomParticlePosition(Vec3 muzzle, Vec3 aimDirection, int distance) {
+        return muzzle.add(aimDirection.scale(distance));
+    }
 
-        Entity shooter = arrow.getOwner();
-        Vec3 requestedAimDirection = shooter == null ? originalVelocity : shooter.getLookAngle();
-        Vec3 tunedVelocity = calculateTunedVelocity(originalVelocity, requestedAimDirection);
-        arrow.shoot(
-                tunedVelocity.x,
-                tunedVelocity.y,
-                tunedVelocity.z,
-                (float) tunedVelocity.length(),
-                0.0F
-        );
+    @EventBusSubscriber(modid = MOD_ID)
+    static final class GameplayEvents {
+        @SubscribeEvent
+        public static void onStartTracking(PlayerEvent.StartTracking event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)
+                    || !(event.getTarget() instanceof HouyisArrowEntity arrow)) {
+                return;
+            }
+
+            syncArrowStateTo(player, arrow);
+        }
     }
 
     record ArrowStatePayload(
@@ -185,6 +132,16 @@ public final class HouYisBow {
         );
         static final StreamCodec<RegistryFriendlyByteBuf, ArrowStatePayload> STREAM_CODEC =
                 CustomPacketPayload.codec(ArrowStatePayload::write, ArrowStatePayload::decode);
+
+        static ArrowStatePayload from(HouyisArrowEntity arrow) {
+            Vec3 position = arrow.position();
+            Vec3 velocity = arrow.getDeltaMovement();
+            return new ArrowStatePayload(
+                    arrow.getId(),
+                    position.x, position.y, position.z,
+                    velocity.x, velocity.y, velocity.z
+            );
+        }
 
         private void write(RegistryFriendlyByteBuf buffer) {
             buffer.writeVarInt(entityId);
@@ -237,14 +194,28 @@ public final class HouYisBow {
             }
         }
 
+        static void applyPending(Level level, int entityId) {
+            PendingArrowState pending = PENDING_STATES.remove(entityId);
+            if (pending != null && !apply(level, pending.payload())) {
+                PENDING_STATES.put(entityId, pending);
+            }
+        }
+
         private static boolean apply(Level level, ArrowStatePayload payload) {
-            if (!(level.getEntity(payload.entityId()) instanceof AbstractArrow arrow)) {
+            if (!(level.getEntity(payload.entityId()) instanceof HouyisArrowEntity arrow)) {
                 return false;
             }
 
             arrow.setPos(payload.positionX(), payload.positionY(), payload.positionZ());
+            Vec3 velocity = new Vec3(payload.velocityX(), payload.velocityY(), payload.velocityZ());
+            arrow.shoot(
+                    velocity.x,
+                    velocity.y,
+                    velocity.z,
+                    (float) velocity.length(),
+                    0.0F
+            );
             arrow.setOldPosAndRot();
-            arrow.setDeltaMovement(payload.velocityX(), payload.velocityY(), payload.velocityZ());
             return true;
         }
 
@@ -257,4 +228,3 @@ public final class HouYisBow {
         }
     }
 }
-

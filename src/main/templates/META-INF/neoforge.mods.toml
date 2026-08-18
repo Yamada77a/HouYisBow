@@ -8,9 +8,11 @@ version="${mod_version}"
 displayName="${mod_name}"
 authors="${mod_authors}"
 description='''
-后羿之弓：让原版弓拥有更快、更准、更有力量感的射击体验。
-0.0.1 将弓箭初速提高至三倍、满蓄力缩短至约 200ms，并为满蓄力射击加入原版烟花声音与粒子效果。
+后羿之弓：一把独立的强化弓。普通原版弓保持原样；后羿之弓具备三箭齐发、高速箭矢、金色监守者音波与原版火箭拖尾。
 '''
+
+[[mixins]]
+config="houyis_bow.mixins.json"
 
 [[dependencies.${mod_id}]]
 modId="neoforge"
@@ -25,4 +27,3 @@ type="required"
 versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
-

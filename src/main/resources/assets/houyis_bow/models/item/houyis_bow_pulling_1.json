@@ -1,0 +1,6 @@
+{
+  "parent": "houyis_bow:item/houyis_bow",
+  "textures": {
+    "layer0": "houyis_bow:item/houyis_bow_pulling_1"
+  }
+}

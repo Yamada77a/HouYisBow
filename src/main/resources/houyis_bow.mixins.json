@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.houyisbow.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "SmithingMenuMixin"
+  ],
+  "client": [
+    "NorthstarPlanetRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
