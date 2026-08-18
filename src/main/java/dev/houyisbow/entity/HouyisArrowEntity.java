@@ -20,6 +20,7 @@ import net.minecraft.world.phys.Vec3;
 public final class HouyisArrowEntity extends AbstractArrow {
     private static final double TRAIL_SPACING = 0.9D;
     private static final int MAX_TRAIL_PARTICLES_PER_TICK = 12;
+    private static final int GROUND_DESPAWN_TICKS = 100;
     private static final double BASE_KNOCKBACK = 4.0D;
     private boolean trailStopped;
 
@@ -46,6 +47,17 @@ public final class HouyisArrowEntity extends AbstractArrow {
     protected void onHit(HitResult result) {
         this.trailStopped = true;
         super.onHit(result);
+    }
+
+    public void disableTrail() {
+        this.trailStopped = true;
+    }
+
+    @Override
+    protected void tickDespawn() {
+        if (++this.inGroundTime >= GROUND_DESPAWN_TICKS) {
+            this.discard();
+        }
     }
 
     @Override

@@ -116,6 +116,9 @@ public final class HouyisBowItem extends BowItem {
             }
 
             Projectile projectile = this.createProjectile(level, shooter, weapon, ammo, isCrit);
+            if (fired > 0 && projectile instanceof HouyisArrowEntity arrow) {
+                arrow.disableTrail();
+            }
             this.shootProjectile(shooter, projectile, index, velocity, inaccuracy, 0.0F, target);
             level.addFreshEntity(projectile);
             if (projectile instanceof HouyisArrowEntity arrow && shooter instanceof ServerPlayer player) {

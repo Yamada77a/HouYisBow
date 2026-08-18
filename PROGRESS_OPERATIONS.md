@@ -108,6 +108,7 @@ E:\我的世界\.minecraft\versions\林双的重工乐事\mods
 | 1.0.3 | 成功 | 6 项通过 | `87719eadf99cd9636f1b24517054915015460540cb6a3fe1bbc899bb27fa1715` | 配方同步修复成功，但出现 BG-004 |
 | 1.0.4 | 成功 | 5 项通过 | `11172e5652f22d7e04a862e128f91d58d87a3a463296f4befd4bc5587a380395` | 完整实例成功进入世界 |
 | 1.0.5 | 成功 | 6 项通过 | `5e9c46ace949bc983dd3bade9b60ca21ee396a19e87d260983baf58ef1e31e32` | 已部署，功能界面和粒子待用户验收 |
+| 1.0.6 | 成功 | 6 项强制重跑通过 | `00b42f69ffe755fb57a895ffec917ba0613e885384eef9aea5645de46bd3b29a` | 单拖尾与 5 秒落地箭清理，待 Windows 实测 |
 
 ## 6. 1.0.3 操作记录
 
@@ -237,7 +238,35 @@ E:\我的世界\.minecraft\versions\林双的重工乐事\mods
 | 配置与存档 | 未修改 |
 | 是否远程启动游戏 | 否 |
 
-## 9. 当前回滚点
+## 9. 1.0.6 操作记录
+
+### 9.1 开发准备
+
+- GitHub 登录账号已核对为 `Yamada77a`。
+- 远端默认主分支为 `main`。
+- 1.0.5 基线提交为 `d0de955`，本地 `main` 与 `origin/main` 一致。
+- 从该基线创建开发分支 `codex/arrow-performance-1.0.6`。
+- 本次只修改后羿弓源码、版本和项目记录；`logs/` 不纳入提交。
+
+### 9.2 本地构建
+
+- `./gradlew --no-daemon --rerun-tasks test` 成功；测试报告为 6 项、0 跳过、0 失败、0 错误。
+- `./gradlew --no-daemon clean test jar` 成功。
+- 产物：`build/libs/houyis-bow-1.0.6.jar`，约 50 KiB。
+- SHA-256：`00b42f69ffe755fb57a895ffec917ba0613e885384eef9aea5645de46bd3b29a`。
+- `neoforge.mods.toml`、Manifest `Specification-Version`、Manifest `Implementation-Version` 均为 `1.0.6`。
+- `javap` 确认射击循环只在实际已发射箭数大于 0 时对后续箭调用 `disableTrail()`。
+- `javap` 确认 `tickDespawn()` 递增 `inGroundTime`，达到 100 时调用 `discard()`。
+- JAR 仍包含 JEI 可选插件、Mixin 配置和 16 张金色声波中性蒙版。
+- `git diff --check` 通过。
+
+### 9.3 Windows 替换
+
+- 用户已明确授权本次连接 Windows、删除旧后羿弓 Mod 并上传 1.0.6。
+- 目标实例、进程状态、删除结果、远端哈希和唯一活动包待实际操作后补充。
+- 本次用户明确要求直接删除旧版，因此不保留 1.0.5 活动 JAR；源码与 Git 历史仍可重新构建回退。
+
+## 10. 当前回滚点
 
 - 当前活动版本：1.0.5。
 - 最近可恢复备份：1.0.4 `.jar.disabled`。
@@ -245,7 +274,7 @@ E:\我的世界\.minecraft\versions\林双的重工乐事\mods
 - 1.0.3 曾触发 BG-004，不应作为首选稳定版本。
 - 回滚前仍必须确认 Minecraft 已完全退出，并再次核对活动 JAR 数量。
 
-## 10. 当前待操作事项
+## 11. 当前待操作事项
 
 用户启动完整实例后，需要反馈：
 
