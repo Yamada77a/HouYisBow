@@ -11,14 +11,14 @@
 | 项目 | 当前状态 |
 | --- | --- |
 | 当前源码版本 | `1.0.6` |
-| 当前 Windows 活动版本 | `houyis-bow-1.0.5.jar`（待本次构建后替换） |
+| 当前 Windows 活动版本 | `houyis-bow-1.0.6.jar` |
 | Minecraft | `1.21.1` |
 | NeoForge | `21.1.233` |
 | Java | `21` |
 | 本地构建 | 1.0.6 已通过 |
 | 本地测试 | 6 项强制重跑通过，0 失败 |
-| Windows 部署 | 待本轮上传 |
-| 1.0.6 性能优化 | 开发中，待本地构建与 Windows 部署 |
+| Windows 部署 | 已完成，远端哈希与本地一致 |
+| 1.0.6 性能优化 | 已构建并部署，待用户重启实测 |
 
 当前发布产物：
 
@@ -309,7 +309,8 @@ SpongePowered Mixin 的配置包及所有子包只能放 Mixin 类。1.0.3 的 `
 - `./gradlew --no-daemon clean test jar` 构建成功。
 - 字节码确认第二支及以后调用 `disableTrail()`，并在 `inGroundTime` 达到 100 时 `discard()`。
 - JAR 文件名、`neoforge.mods.toml` 和 Manifest 均为 1.0.6。
-- Windows 上传和完整实例性能验收待后续步骤记录。
+- Windows 目标实例已删除 1.0.5 并上传 1.0.6；远端哈希与本地一致，唯一活动后羿弓 JAR 为 1.0.6。
+- 完整实例性能验收待用户重启后完成。
 
 ## 9. 错误编号与版本对应
 
