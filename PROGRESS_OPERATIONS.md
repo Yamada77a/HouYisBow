@@ -273,10 +273,24 @@ E:\我的世界\.minecraft\versions\林双的重工乐事\mods
 - 未修改其它 Mod、配置、存档、地图或路径点，也未远程启动游戏。
 - 本次用户明确要求直接删除旧版，因此 Windows 不保留 1.0.5 JAR 回滚副本；源码与 Git 历史仍可重新构建 1.0.5。
 
+### 9.4 Rainplay 服务端替换
+
+- 用户于 2026-08-22 明确确认服务端替换，并要求完成后由其自行重启。
+- 按项目硬规则从 Mac 连接 `windows-linshuang`，再由 Windows 使用 SFTP 连接 Rainplay；未从 Mac 直接连接服务器。
+- Rainplay ED25519 主机指纹发生变化；首次连接由严格检查安全阻止，没有任何服务端修改。用户确认面板地址与端口后，验证新指纹并只更新该主机端口的 Windows `known_hosts` 记录，原文件已备份。
+- 替换前 `/mods` 启用 `houyis-bow-1.0.5.jar`，大小 50656 字节。
+- 旧包已移动到 `/backup/codex-20260822-before-houyis-bow-1.0.6-server/houyis-bow-1.0.5.jar`，保留可回滚副本。
+- 1.0.6 先上传为 `/mods/houyis-bow-1.0.6.jar.part`；远端大小为 50844 字节。
+- 临时包从服务器回读至 Windows，SHA-256 为 `00B42F69FFE755FB57A895FFEC917BA0613E885384EEF9AEA5645DE46BD3B29A`，与本地一致。
+- 哈希通过后原子改名为 `/mods/houyis-bow-1.0.6.jar`。
+- 最终 `/mods` 唯一启用的后羿之弓为 1.0.6；0.0.1 与 1.0.4 保持 `.jar.disabled`；1.0.6 `.part` 不存在。
+- Windows 回读临时文件已删除；未修改其它服务端文件，也未执行服务器重启。
+- 运行验收待用户重启后检查 `Done`、Mod 版本、客户端进服及射箭性能。
+
 ## 10. 当前回滚点
 
 - 当前活动版本：1.0.6。
-- 用户要求直接删除旧版，Windows 目标目录没有保留 1.0.5 JAR 或 `.jar.disabled` 回滚副本。
+- Windows 目标目录按用户要求没有保留 1.0.5 JAR；Rainplay 服务端已保留 1.0.5 于 `/backup/codex-20260822-before-houyis-bow-1.0.6-server/`。
 - 如需回滚，应从 Git `main` 的 1.0.5 基线提交 `d0de955` 重新构建并校验，再在 Minecraft 完全退出后替换。
 - 1.0.3 曾触发 BG-004，不应作为稳定回滚版本。
 
